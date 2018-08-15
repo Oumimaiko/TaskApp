@@ -14,6 +14,8 @@ import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.AdapterView;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ListView;
 
 import java.util.ArrayList;
@@ -22,6 +24,7 @@ import java.util.List;
 
 import io.realm.Realm;
 import io.realm.RealmChangeListener;
+import io.realm.RealmQuery;
 import io.realm.RealmResults;
 import io.realm.Sort;
 
@@ -37,6 +40,10 @@ public class MainActivity extends AppCompatActivity {
     };
     private ListView mListView;
     private TaskAdapter mTaskAdapter;
+
+    private EditText mEditText;
+    private Button mButton;
+    private boolean mSearchingNow = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,6 +62,23 @@ public class MainActivity extends AppCompatActivity {
         // Realmの設定
         mRealm = Realm.getDefaultInstance();
         mRealm.addChangeListener(mRealmListener);
+
+        mEditText = (EditText)findViewById(R.id.category_edit_text);
+        mButton = (Button) findViewById(R.id.submitButton);
+        mButton.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View v){
+                if(!mSearchingNow) {
+                    reloadCategorySearchListView();
+                    mButton.setText("キャンセル");
+                    mSearchingNow = true;
+                } else {
+                    reloadListView();
+                    mButton.setText("検索");
+                    mSearchingNow = false;
+                }
+            }
+        });
 
         // ListViewの設定
         mTaskAdapter = new TaskAdapter(MainActivity.this);
@@ -140,5 +164,15 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
 
         mRealm.close();
+    }
+
+    private void reloadCategorySearchListView(){
+        RealmQuery<Task> query = mRealm.where(Task.class);
+        query.equalTo("category",mEditText.getText().toString());
+        RealmResults<Task> searchResult = query.findAll();
+
+        mTaskAdapter.setTaskList(mRealm.copyFromRealm(searchResult));
+        mListView.setAdapter(mTaskAdapter);
+        mTaskAdapter.notifyDataSetChanged();
     }
 }
